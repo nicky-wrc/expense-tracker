@@ -102,12 +102,14 @@ jobs:
       - name: Check backend syntax
         run: |
           echo "Checking syntax..."
-          if find src -name "*.js" -type f -exec node -c {} \; 2>&1; then
-            echo "✅ All syntax checks passed"
-          else
-            echo "❌ Syntax check failed"
-            exit 1
-          fi
+          find src -name "*.js" -type f | while read file; do
+            echo "Checking $file"
+            if ! node -c "$file" 2>&1; then
+              echo "❌ Syntax error in $file"
+              exit 1
+            fi
+          done
+          echo "✅ All syntax checks passed"
       
       - name: Test backend build
         run: |
