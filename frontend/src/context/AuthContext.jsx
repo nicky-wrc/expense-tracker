@@ -1,19 +1,23 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState } from 'react'
 
 const AuthContext = createContext()
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const token = localStorage.getItem('token')
-    const userData = localStorage.getItem('user')
-    if (token && userData) {
-      setUser(JSON.parse(userData))
+  // Initialize user state from localStorage if available
+  const [user, setUser] = useState(() => {
+    try {
+      const token = localStorage.getItem('token')
+      const userData = localStorage.getItem('user')
+      if (token && userData) {
+        return JSON.parse(userData)
+      }
+    } catch (error) {
+      console.error('Error parsing user data:', error)
     }
-    setLoading(false)
-  }, [])
+    return null
+  })
+  // Loading is always false since we initialize user from localStorage synchronously
+  const loading = false
 
   const login = (token, userData) => {
     localStorage.setItem('token', token)
