@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { authAPI } from '../services/api'
 import { useNavigate } from 'react-router-dom'
 import { 
-  Home, User, LogOut, ArrowLeft, ArrowRight, Camera, Save, 
+  Home, User, LogOut, Camera, Save, 
   Mail, Lock, User as UserIcon, Upload, X
 } from 'lucide-react'
 
@@ -164,11 +164,9 @@ const Profile = () => {
 
         <div style={styles.logoSection}>
           <div style={styles.logo}>
-            <ArrowLeft size={16} />
-            <span style={{ margin: '0 4px' }}>EXP</span>
-            <ArrowRight size={16} />
+            <span>EXT</span>
           </div>
-          <span style={styles.logoText}>EXPensio</span>
+          <span style={styles.logoText}>Expense Tracker</span>
         </div>
 
         <button onClick={logout} style={styles.logoutBtn}>

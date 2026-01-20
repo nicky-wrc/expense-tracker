@@ -7,7 +7,7 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Toolti
 import { 
   Home, User, LogOut, Plus, FileText, Upload, BarChart3, Plane, 
   Filter, Calendar, Trash2, Edit2, X, Search, Download, Settings,
-  TrendingUp, Wallet as WalletIcon, ArrowLeft, ArrowRight, DollarSign, Receipt
+  TrendingUp, Wallet as WalletIcon, DollarSign, Receipt
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
@@ -17,6 +17,7 @@ const Dashboard = () => {
   const [expenses, setExpenses] = useState([])
   const [categories, setCategories] = useState([])
   const [trips, setTrips] = useState([])
+  const [tripsModalKey, setTripsModalKey] = useState(0)
   const [summary, setSummary] = useState(null)
   const [showModal, setShowModal] = useState(false)
   const [showReceiptModal, setShowReceiptModal] = useState(false)
@@ -25,6 +26,7 @@ const Dashboard = () => {
   const [showTripModal, setShowTripModal] = useState(false)
   const [editingTrip, setEditingTrip] = useState(null)
   const [showTripsModal, setShowTripsModal] = useState(false)
+  const [shouldReopenTripsModal, setShouldReopenTripsModal] = useState(false)
   const [addingExpenseToTrip, setAddingExpenseToTrip] = useState(null)
   const [editingExpense, setEditingExpense] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -134,6 +136,7 @@ const Dashboard = () => {
   const fetchTrips = async () => {
     try {
       const res = await tripAPI.getAll()
+      console.log('Fetched trips:', res.data)
       setTrips(res.data)
     } catch (error) {
       console.error('Error fetching trips:', error)
@@ -270,51 +273,132 @@ const Dashboard = () => {
     try {
       const tripData = {
         name: tripFormData.name,
-        description: tripFormData.description,
+        description: tripFormData.description || '',
         startDate: tripFormData.startDate,
         endDate: tripFormData.endDate || null,
         expenses: tripFormData.expenses.filter(exp => exp.amount && exp.categoryId)
       }
       
       if (editingTrip) {
-        await tripAPI.update(editingTrip.id, tripData)
+        const response = await tripAPI.update(editingTrip.id, tripData)
+        console.log('Trip updated successfully:', response.data)
+        
+        // Close edit modal first
+        setShowTripModal(false)
+        setEditingTrip(null)
+        setTripFormData({
+          name: '',
+          description: '',
+          startDate: format(new Date(), 'yyyy-MM-dd'),
+          endDate: '',
+          expenses: [{
+            amount: '',
+            description: '',
+            date: format(new Date(), 'yyyy-MM-dd'),
+            categoryId: categories[0]?.id || ''
+          }]
+        })
+        
         alert('แก้ไขการเดินทางสำเร็จ!')
+        
+        // Refresh dashboard data first (this also updates trips)
+        await fetchData()
+        
+        // Reopen View Trips modal if it was open before edit
+        if (shouldReopenTripsModal) {
+          setShouldReopenTripsModal(false)
+          
+          // Close modal first to force unmount
+          setShowTripsModal(false)
+          
+          // Wait a bit, then refresh trips and reopen modal
+          setTimeout(async () => {
+            // Force refresh trips one more time before reopening
+            const finalTripsResponse = await tripAPI.getAll()
+            console.log('Final trips before reopening modal:', finalTripsResponse.data)
+            console.log('Trip details:', finalTripsResponse.data.map(t => ({
+              id: t.id,
+              name: t.name,
+              description: t.description,
+              updatedAt: t.updatedAt,
+              expensesCount: t.expenses?.length || 0,
+              expenses: t.expenses
+            })))
+            
+            // Use functional update to ensure React recognizes the change
+            const newTrips = JSON.parse(JSON.stringify(finalTripsResponse.data))
+            console.log('Setting trips state to (new array):', newTrips)
+            
+            // Update trips state immediately
+            setTrips(newTrips)
+            
+            // Force re-render by updating key
+            setTripsModalKey(prev => prev + 1)
+            
+            // Reopen modal after state update with a longer delay to ensure state is processed
+            setTimeout(() => {
+              console.log('Reopening modal, current trips:', trips)
+              setShowTripsModal(true)
+            }, 300)
+          }, 250)
+        }
       } else {
         await tripAPI.create(tripData)
         alert('สร้างการเดินทางสำเร็จ!')
-      }
-      
-      setShowTripModal(false)
-      setEditingTrip(null)
-      setTripFormData({
-        name: '',
-        description: '',
-        startDate: format(new Date(), 'yyyy-MM-dd'),
-        endDate: '',
-        expenses: [{
-          amount: '',
+        
+        setShowTripModal(false)
+        setEditingTrip(null)
+        setTripFormData({
+          name: '',
           description: '',
-          date: format(new Date(), 'yyyy-MM-dd'),
-          categoryId: categories[0]?.id || ''
-        }]
-      })
-      fetchData()
-      fetchTrips()
+          startDate: format(new Date(), 'yyyy-MM-dd'),
+          endDate: '',
+          expenses: [{
+            amount: '',
+            description: '',
+            date: format(new Date(), 'yyyy-MM-dd'),
+            categoryId: categories[0]?.id || ''
+          }]
+        })
+        // Refresh data after successful creation
+        await Promise.all([fetchData(), fetchTrips()])
+      }
     } catch (error) {
       console.error('Error saving trip:', error)
+      console.error('Error details:', error.response?.data)
       alert('เกิดข้อผิดพลาด: ' + (error.response?.data?.error || error.message))
     }
   }
 
   const handleEditTrip = (trip) => {
     setEditingTrip(trip)
+    // If trip has expenses, use the first one; otherwise create empty expense
+    const existingExpense = trip.expenses && trip.expenses.length > 0 ? trip.expenses[0] : null
     setTripFormData({
       name: trip.name,
       description: trip.description || '',
       startDate: format(new Date(trip.startDate), 'yyyy-MM-dd'),
       endDate: trip.endDate ? format(new Date(trip.endDate), 'yyyy-MM-dd') : '',
-      expenses: []
+      expenses: existingExpense ? [{
+        id: existingExpense.id,
+        amount: existingExpense.amount.toString(),
+        description: existingExpense.description || '',
+        date: format(new Date(existingExpense.date), 'yyyy-MM-dd'),
+        categoryId: existingExpense.categoryId
+      }] : [{
+        amount: '',
+        description: '',
+        date: format(new Date(), 'yyyy-MM-dd'),
+        categoryId: categories[0]?.id || ''
+      }]
     })
+    // Store that View Trips modal was open (we'll reopen it after edit)
+    // Close View Trips modal before opening Edit modal
+    const wasTripsModalOpen = showTripsModal
+    if (wasTripsModalOpen) {
+      setShouldReopenTripsModal(true)
+    }
+    setShowTripsModal(false)
     setShowTripModal(true)
   }
 
@@ -514,11 +598,9 @@ const Dashboard = () => {
 
         <div style={styles.logoSection}>
           <div style={styles.logo}>
-            <ArrowLeft size={16} />
-            <span style={{ margin: '0 4px' }}>EXP</span>
-            <ArrowRight size={16} />
+            <span>EXT</span>
           </div>
-          <span style={styles.logoText}>EXPensio</span>
+          <span style={styles.logoText}>Expense Tracker</span>
         </div>
 
         <button onClick={logout} style={styles.logoutBtn}>
@@ -1090,8 +1172,11 @@ const Dashboard = () => {
         <div style={styles.modalOverlay} onClick={() => setShowTripModal(false)}>
           <div style={{ ...styles.modal, maxWidth: '600px' }} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
-              <h3 style={styles.modalTitle}>Create New Trip</h3>
-              <button onClick={() => setShowTripModal(false)} style={styles.closeBtn}>
+              <h3 style={styles.modalTitle}>{editingTrip ? 'Edit Trip' : 'Create New Trip'}</h3>
+              <button onClick={() => {
+                setShowTripModal(false)
+                setEditingTrip(null)
+              }} style={styles.closeBtn}>
                 <X size={24} />
               </button>
             </div>
@@ -1144,20 +1229,26 @@ const Dashboard = () => {
                   <input
                     type="number"
                     step="0.01"
-                    value={tripFormData.expenses[0].amount}
-                    onChange={(e) => setTripFormData({
-                      ...tripFormData,
-                      expenses: [{ ...tripFormData.expenses[0], amount: e.target.value }]
-                    })}
+                    value={tripFormData.expenses[0]?.amount || ''}
+                    onChange={(e) => {
+                      const currentExpense = tripFormData.expenses[0] || { amount: '', description: '', date: format(new Date(), 'yyyy-MM-dd'), categoryId: categories[0]?.id || '' }
+                      setTripFormData({
+                        ...tripFormData,
+                        expenses: [{ ...currentExpense, amount: e.target.value }]
+                      })
+                    }}
                     style={styles.input}
                     placeholder="Amount (฿)"
                   />
                   <select
-                    value={tripFormData.expenses[0].categoryId}
-                    onChange={(e) => setTripFormData({
-                      ...tripFormData,
-                      expenses: [{ ...tripFormData.expenses[0], categoryId: e.target.value }]
-                    })}
+                    value={tripFormData.expenses[0]?.categoryId || ''}
+                    onChange={(e) => {
+                      const currentExpense = tripFormData.expenses[0] || { amount: '', description: '', date: format(new Date(), 'yyyy-MM-dd'), categoryId: categories[0]?.id || '' }
+                      setTripFormData({
+                        ...tripFormData,
+                        expenses: [{ ...currentExpense, categoryId: e.target.value }]
+                      })
+                    }}
                     style={styles.input}
                   >
                     <option value="">Select category</option>
@@ -1167,11 +1258,14 @@ const Dashboard = () => {
                   </select>
                   <input
                     type="text"
-                    value={tripFormData.expenses[0].description}
-                    onChange={(e) => setTripFormData({
-                      ...tripFormData,
-                      expenses: [{ ...tripFormData.expenses[0], description: e.target.value }]
-                    })}
+                    value={tripFormData.expenses[0]?.description || ''}
+                    onChange={(e) => {
+                      const currentExpense = tripFormData.expenses[0] || { amount: '', description: '', date: format(new Date(), 'yyyy-MM-dd'), categoryId: categories[0]?.id || '' }
+                      setTripFormData({
+                        ...tripFormData,
+                        expenses: [{ ...currentExpense, description: e.target.value }]
+                      })
+                    }}
                     style={styles.input}
                     placeholder="Description"
                   />
@@ -1179,7 +1273,7 @@ const Dashboard = () => {
               </div>
 
               <button type="submit" style={styles.submitBtn}>
-                Create Trip
+                {editingTrip ? 'Update Trip' : 'Create Trip'}
               </button>
             </form>
           </div>
@@ -1200,11 +1294,11 @@ const Dashboard = () => {
               {trips.length === 0 ? (
                 <p style={styles.noData}>No trips found. Create your first trip!</p>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} key={`trips-container-${tripsModalKey}-${trips.map(t => `${t.id}-${t.updatedAt || t.createdAt}`).join('-')}`}>
                   {trips.map((trip) => {
                     const totalExpenses = trip.expenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0
                     return (
-                      <div key={trip.id} style={{ ...styles.card, padding: '20px' }}>
+                      <div key={`${trip.id}-${trip.updatedAt || trip.createdAt}`} style={{ ...styles.card, padding: '20px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                           <div>
                             <h4 style={{ color: '#ffffff', fontSize: '18px', fontWeight: '600', marginBottom: '4px' }}>

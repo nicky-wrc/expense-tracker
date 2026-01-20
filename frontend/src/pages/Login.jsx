@@ -37,7 +37,7 @@ const Login = () => {
           <div style={styles.logoContainer}>
             <Wallet size={40} color="#7c3aed" />
           </div>
-          <h1 style={styles.title}>EXPensio</h1>
+          <h1 style={styles.title}>Expense Tracker</h1>
           <p style={styles.subtitle}>Welcome back! Sign in to continue</p>
         </div>
 
