@@ -10,8 +10,16 @@ const Login = () => {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [focusedField, setFocusedField] = useState(null)
+  const [isMobile, setIsMobile] = useState(false)
   const navigate = useNavigate()
   const { login } = useAuth()
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth <= 768)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -37,7 +45,10 @@ const Login = () => {
           <div style={styles.logoContainer}>
             <Wallet size={40} color="#7c3aed" />
           </div>
-          <h1 style={styles.title}>Expense Tracker</h1>
+          <h1 style={{
+            ...styles.title,
+            fontSize: isMobile ? '28px' : '32px'
+          }}>Expense Tracker</h1>
           <p style={styles.subtitle}>Welcome back! Sign in to continue</p>
         </div>
 
@@ -153,7 +164,7 @@ const styles = {
     boxShadow: '0 8px 24px rgba(124, 58, 237, 0.3)'
   },
   title: {
-    fontSize: '32px',
+    fontSize: window.innerWidth <= 768 ? '28px' : '32px',
     fontWeight: '800',
     color: '#ffffff',
     marginBottom: '8px',

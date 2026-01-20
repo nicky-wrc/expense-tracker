@@ -4,7 +4,7 @@ import { authAPI } from '../services/api'
 import { useNavigate } from 'react-router-dom'
 import { 
   Home, User, LogOut, Camera, Save, 
-  Mail, Lock, User as UserIcon, Upload, X
+  Mail, Lock, User as UserIcon, Upload, X, Menu
 } from 'lucide-react'
 
 const Profile = () => {
@@ -13,6 +13,8 @@ const Profile = () => {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
   const [activeNav, setActiveNav] = useState('profile')
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   
   const [formData, setFormData] = useState({
     name: user?.name || '',

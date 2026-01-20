@@ -55,3 +55,34 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 input[type="date"] {
   color-scheme: dark;
 }
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  /* Mobile styles */
+  body {
+    font-size: 14px;
+  }
+  
+  /* Prevent horizontal scroll */
+  * {
+    max-width: 100%;
+  }
+  
+  /* Touch-friendly buttons */
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Better input sizing on mobile */
+  input, textarea, select {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+}
+
+@media (max-width: 480px) {
+  /* Small mobile styles */
+  body {
+    font-size: 13px;
+  }
+}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Menu, X as CloseIcon } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { expenseAPI, categoryAPI, dashboardAPI, tripAPI } from '../services/api'
 import { Eye, Image as ImageIcon } from 'lucide-react'
@@ -7,7 +8,7 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Toolti
 import { 
   Home, User, LogOut, Plus, FileText, Upload, BarChart3, Plane, 
   Filter, Calendar, Trash2, Edit2, X, Search, Download, Settings,
-  TrendingUp, Wallet as WalletIcon, DollarSign, Receipt
+  TrendingUp, Wallet as WalletIcon, DollarSign, Receipt, Menu
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
@@ -19,6 +20,8 @@ const Dashboard = () => {
   const [trips, setTrips] = useState([])
   const [tripsModalKey, setTripsModalKey] = useState(0)
   const [summary, setSummary] = useState(null)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [showReceiptModal, setShowReceiptModal] = useState(false)
   const [showReceiptViewModal, setShowReceiptViewModal] = useState(false)
@@ -104,6 +107,20 @@ const Dashboard = () => {
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  // Handle mobile responsive
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768)
+      if (window.innerWidth > 768) {
+        setIsMobileMenuOpen(false)
+      }
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   const handleDateRangeChange = (range) => {
     setDateRange(range)
@@ -560,8 +577,55 @@ const Dashboard = () => {
 
   return (
     <div style={styles.container}>
+      {/* Mobile Menu Toggle */}
+      {isMobile && (
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          style={{
+            position: 'fixed',
+            top: '16px',
+            left: '16px',
+            zIndex: 1001,
+            background: '#1a1a1a',
+            border: '1px solid #2a2a2a',
+            borderRadius: '8px',
+            padding: '10px',
+            color: '#ffffff',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+      )}
+
+      {/* Mobile Overlay */}
+      {isMobile && isMobileMenuOpen && (
+        <div
+          onClick={() => setIsMobileMenuOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            zIndex: 999
+          }}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside style={styles.sidebar}>
+      <aside style={{
+        ...styles.sidebar,
+        ...(isMobile ? {
+          transform: isMobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.3s ease-in-out',
+          zIndex: 1000
+        } : {})
+      }}>
         <div style={styles.profileSection}>
           <div style={styles.avatar}>
             {user?.avatar ? (
@@ -579,6 +643,7 @@ const Dashboard = () => {
             onClick={() => {
               setActiveNav('home')
               navigate('/dashboard')
+              if (isMobile) setIsMobileMenuOpen(false)
             }}
           >
             <Home size={20} />
@@ -589,6 +654,7 @@ const Dashboard = () => {
             onClick={() => {
               setActiveNav('profile')
               navigate('/profile')
+              if (isMobile) setIsMobileMenuOpen(false)
             }}
           >
             <User size={20} />
@@ -610,13 +676,30 @@ const Dashboard = () => {
       </aside>
 
       {/* Main Content */}
-      <main style={styles.main}>
+      <main style={{
+        ...styles.main,
+        ...(isMobile ? {
+          marginLeft: '0',
+          width: '100%',
+          padding: '16px',
+          paddingTop: '60px'
+        } : {})
+      }}>
         <div style={styles.topBar}>
-          <h1 style={styles.pageTitle}>Dashboard</h1>
+          <h1 style={{
+            ...styles.pageTitle,
+            ...(isMobile ? { fontSize: '24px' } : {})
+          }}>Dashboard</h1>
         </div>
 
         {/* Pending Tasks & Recent Expenses Cards */}
-        <div style={styles.topCards}>
+        <div style={{
+          ...styles.topCards,
+          ...(isMobile ? {
+            gridTemplateColumns: '1fr',
+            gap: '16px'
+          } : {})
+        }}>
           <div style={styles.card}>
             <h3 style={styles.cardTitle}>Pending Tasks</h3>
             <div style={styles.taskList}>
