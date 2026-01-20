@@ -112,26 +112,31 @@ jobs:
       - name: Check backend syntax
         run: |
           echo "Checking syntax..."
-          find src -name "*.js" -type f | while read file; do
-            echo "Checking $file"
+          ERROR_COUNT=0
+          for file in $(find src -name "*.js" -type f); do
+            echo "Checking $file..."
             if ! node -c "$file" 2>&1; then
               echo "❌ Syntax error in $file"
-              exit 1
+              ERROR_COUNT=$((ERROR_COUNT + 1))
             fi
           done
+          if [ $ERROR_COUNT -gt 0 ]; then
+            echo "❌ Found $ERROR_COUNT syntax error(s)"
+            exit 1
+          fi
           echo "✅ All syntax checks passed"
       
       - name: Test backend build
         run: |
-          # Test that server can start (background with timeout)
-          npm start &
+          echo "Testing server startup..."
+          timeout 10 npm start || true &
           SERVER_PID=$!
-          sleep 3
-          if ps -p $SERVER_PID > /dev/null; then
+          sleep 5
+          if kill -0 $SERVER_PID 2>/dev/null; then
             echo "✅ Server started successfully"
             kill $SERVER_PID 2>/dev/null || true
           else
-            echo "⚠️ Server process check completed"
+            echo "⚠️ Server startup check completed"
           fi
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
