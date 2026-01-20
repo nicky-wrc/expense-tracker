@@ -86,10 +86,20 @@ jobs:
         run: npm ci
       
       - name: Validate Prisma schema
-        run: npx prisma validate
+        run: |
+          echo "Validating Prisma schema..."
+          npx prisma validate || {
+            echo "❌ Prisma validation failed"
+            exit 1
+          }
       
       - name: Generate Prisma Client
-        run: npx prisma generate
+        run: |
+          echo "Generating Prisma Client..."
+          npx prisma generate || {
+            echo "❌ Prisma Client generation failed"
+            exit 1
+          }
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
       
