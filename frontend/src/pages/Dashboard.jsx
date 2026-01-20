@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Menu, X as CloseIcon } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { expenseAPI, categoryAPI, dashboardAPI, tripAPI } from '../services/api'
 import { Eye, Image as ImageIcon } from 'lucide-react'
