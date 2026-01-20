@@ -27,6 +27,19 @@ const Profile = () => {
   const [avatarPreview, setAvatarPreview] = useState(null)
 
   useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768)
+      if (window.innerWidth > 768) {
+        setIsMobileMenuOpen(false)
+      }
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  useEffect(() => {
     if (user) {
       setFormData({
         name: user.name || '',
@@ -131,8 +144,55 @@ const Profile = () => {
 
   return (
     <div style={styles.container}>
+      {/* Mobile Menu Toggle */}
+      {isMobile && (
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          style={{
+            position: 'fixed',
+            top: '16px',
+            left: '16px',
+            zIndex: 1001,
+            background: '#1a1a1a',
+            border: '1px solid #2a2a2a',
+            borderRadius: '8px',
+            padding: '10px',
+            color: '#ffffff',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+      )}
+
+      {/* Mobile Overlay */}
+      {isMobile && isMobileMenuOpen && (
+        <div
+          onClick={() => setIsMobileMenuOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            zIndex: 999
+          }}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside style={styles.sidebar}>
+      <aside style={{
+        ...styles.sidebar,
+        ...(isMobile ? {
+          transform: isMobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.3s ease-in-out',
+          zIndex: 1000
+        } : {})
+      }}>
         <div style={styles.profileSection}>
           <div style={styles.avatar}>
             {avatarPreview ? (
@@ -150,6 +210,7 @@ const Profile = () => {
             onClick={() => {
               setActiveNav('home')
               navigate('/dashboard')
+              if (isMobile) setIsMobileMenuOpen(false)
             }}
           >
             <Home size={20} />
@@ -178,9 +239,20 @@ const Profile = () => {
       </aside>
 
       {/* Main Content */}
-      <main style={styles.main}>
+      <main style={{
+        ...styles.main,
+        ...(isMobile ? {
+          marginLeft: '0',
+          width: '100%',
+          padding: '16px',
+          paddingTop: '60px'
+        } : {})
+      }}>
         <div style={styles.topBar}>
-          <h1 style={styles.pageTitle}>Profile Settings</h1>
+          <h1 style={{
+            ...styles.pageTitle,
+            ...(isMobile ? { fontSize: '24px' } : {})
+          }}>Profile Settings</h1>
         </div>
 
         <div style={styles.card}>
