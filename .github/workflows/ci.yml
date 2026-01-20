@@ -92,6 +92,8 @@ jobs:
             echo "❌ Prisma validation failed"
             exit 1
           }
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
       
       - name: Generate Prisma Client
         run: |
