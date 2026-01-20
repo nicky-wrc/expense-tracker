@@ -285,7 +285,6 @@ const Dashboard = () => {
       }
       
       setShowTripModal(false)
-      setShowEditTripModal(false)
       setEditingTrip(null)
       setTripFormData({
         name: '',
@@ -316,7 +315,7 @@ const Dashboard = () => {
       endDate: trip.endDate ? format(new Date(trip.endDate), 'yyyy-MM-dd') : '',
       expenses: []
     })
-    setShowEditTripModal(true)
+    setShowTripModal(true)
   }
 
   const handleDeleteTrip = async (tripId) => {
