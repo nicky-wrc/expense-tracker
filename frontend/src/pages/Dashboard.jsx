@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { expenseAPI, categoryAPI, dashboardAPI, tripAPI } from '../services/api'
 import { Eye, Image as ImageIcon } from 'lucide-react'
@@ -23,7 +23,6 @@ const Dashboard = () => {
   const [showReceiptViewModal, setShowReceiptViewModal] = useState(false)
   const [viewReceiptUrl, setViewReceiptUrl] = useState(null)
   const [showTripModal, setShowTripModal] = useState(false)
-  const [showEditTripModal, setShowEditTripModal] = useState(false)
   const [editingTrip, setEditingTrip] = useState(null)
   const [showTripsModal, setShowTripsModal] = useState(false)
   const [addingExpenseToTrip, setAddingExpenseToTrip] = useState(null)
@@ -62,13 +61,47 @@ const Dashboard = () => {
     }]
   })
 
+  const fetchCategories = useCallback(async () => {
+    try {
+      const res = await categoryAPI.getAll()
+      setCategories(res.data)
+      if (res.data.length > 0 && !formData.categoryId) {
+        setFormData(prev => ({ ...prev, categoryId: res.data[0].id }))
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+    }
+  }, [formData.categoryId])
+
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    try {
+      const params = { startDate, endDate, sortBy, sortOrder }
+      if (filterCategory) params.categoryId = filterCategory
+
+      const [expensesRes, summaryRes, tripsRes] = await Promise.all([
+        expenseAPI.getAll(params),
+        dashboardAPI.getSummary({ startDate, endDate }),
+        tripAPI.getAll().catch(() => ({ data: [] }))
+      ])
+
+      setExpenses(expensesRes.data)
+      setSummary(summaryRes.data)
+      setTrips(tripsRes.data || [])
+    } catch (error) {
+      console.error('Error fetching data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [startDate, endDate, filterCategory, sortBy, sortOrder])
+
   useEffect(() => {
     fetchCategories()
-  }, [])
+  }, [fetchCategories])
 
   useEffect(() => {
     fetchData()
-  }, [startDate, endDate, filterCategory, sortBy, sortOrder])
+  }, [fetchData])
 
   const handleDateRangeChange = (range) => {
     setDateRange(range)
@@ -97,39 +130,6 @@ const Dashboard = () => {
     setEndDate(format(end, 'yyyy-MM-dd'))
   }
 
-  const fetchCategories = async () => {
-    try {
-      const res = await categoryAPI.getAll()
-      setCategories(res.data)
-      if (res.data.length > 0 && !formData.categoryId) {
-        setFormData({ ...formData, categoryId: res.data[0].id })
-      }
-    } catch (error) {
-      console.error('Error fetching categories:', error)
-    }
-  }
-
-  const fetchData = async () => {
-    setLoading(true)
-    try {
-      const params = { startDate, endDate, sortBy, sortOrder }
-      if (filterCategory) params.categoryId = filterCategory
-
-      const [expensesRes, summaryRes, tripsRes] = await Promise.all([
-        expenseAPI.getAll(params),
-        dashboardAPI.getSummary({ startDate, endDate }),
-        tripAPI.getAll().catch(() => ({ data: [] }))
-      ])
-
-      setExpenses(expensesRes.data)
-      setSummary(summaryRes.data)
-      setTrips(tripsRes.data || [])
-    } catch (error) {
-      console.error('Error fetching data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const fetchTrips = async () => {
     try {
@@ -757,7 +757,7 @@ const Dashboard = () => {
             <div style={styles.chartCard}>
               <h3 style={styles.chartTitle}>Team Spending Trend</h3>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={summary.byCategory.map((cat, idx) => ({
+                <BarChart data={summary.byCategory.map((cat) => ({
                   name: cat.name.slice(0, 2).toUpperCase(),
                   value: cat.total,
                   color: cat.color || '#3b82f6'

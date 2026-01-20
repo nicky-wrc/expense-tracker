@@ -2,7 +2,9 @@ import { createContext, useContext, useState, useEffect } from 'react'
 
 const AuthContext = createContext()
 
-export const useAuth = () => useContext(AuthContext)
+// Export hook separately to avoid Fast Refresh warning
+const useAuth = () => useContext(AuthContext)
+export { useAuth }
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)

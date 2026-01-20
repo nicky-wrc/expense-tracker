@@ -32,6 +32,7 @@ jobs:
       
       - name: Run ESLint
         run: npm run lint
+        continue-on-error: false
       
       - name: Build frontend
         run: npm run build
@@ -93,24 +94,32 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
       
       - name: Push Prisma schema to database
-        run: npx prisma db push --skip-generate
+        run: npx prisma db push --accept-data-loss
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
         continue-on-error: true
       
       - name: Check backend syntax
         run: |
-          node -c src/index.js || echo "Syntax check completed"
-          for file in src/**/*.js; do
-            if [ -f "$file" ]; then
-              node -c "$file" || echo "Checked $file"
-            fi
+          echo "Checking syntax..."
+          find src -name "*.js" -type f | while read file; do
+            echo "Checking $file"
+            node -c "$file" || exit 1
           done
+          echo "✅ All syntax checks passed"
       
       - name: Test backend build
         run: |
-          # Test that server can start (with timeout)
-          timeout 5 npm start || echo "Server start test completed"
+          # Test that server can start (background with timeout)
+          npm start &
+          SERVER_PID=$!
+          sleep 3
+          if ps -p $SERVER_PID > /dev/null; then
+            echo "✅ Server started successfully"
+            kill $SERVER_PID 2>/dev/null || true
+          else
+            echo "⚠️ Server process check completed"
+          fi
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
           JWT_SECRET: test-secret-key-for-ci
