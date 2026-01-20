@@ -39,5 +39,5 @@ export const AuthProvider = ({ children }) => {
   )
 }
 
-// Export hook after component to avoid Fast Refresh warning
+// Export hook after component definition to avoid Fast Refresh warning
 export const useAuth = () => useContext(AuthContext)
